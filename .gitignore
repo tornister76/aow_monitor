@@ -1,0 +1,39 @@
+# Executables
+*.exe
+*.dll
+*.pdb
+
+# Build results
+bin/
+obj/
+Debug/
+Release/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# Package files
+*.nupkg
+*.snupkg
+
+# Local config files
+config.ini
+*.log
+
+# Archive files
+*.zip
+*.7z
+*.rar
+
+# Diagnostic files
+*diagnostic*.txt
