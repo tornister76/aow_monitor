@@ -115,19 +115,15 @@ public class DatabaseManager
         }
         catch (OracleException ex) when (ex.Message.Contains("ORA-04088") && ex.Message.Contains("TSPY_CONN_APW_USER"))
         {
-            _logger.LogWarning("Encountered trigger error ORA-04088 with TSPY_CONN_APW_USER. Attempting to fix trust settings.");
+            _logger.LogError("BŁĄD ORACLE: Wykryto wyzwalacz TSPY_CONN_APW_USER blokujący aplikację KSAOWMONITOR.EXE");
+            _logger.LogError("INSTRUKCJA NAPRAWY:");
+            _logger.LogError("1. Uruchom SQL*Plus jako administrator bazy danych");
+            _logger.LogError("2. Wykonaj polecenie: UPDATE apw_user.aapp SET trust=1 WHERE UPPER(nazwa) LIKE '%KSAOWMONITOR.EXE%';");
+            _logger.LogError("3. Wykonaj COMMIT;");
+            _logger.LogError("4. Uruchom ponownie aplikację KsaowMonitor");
+            _logger.LogError("SZCZEGÓŁY BŁĘDU: {ErrorMessage}", ex.Message);
             
-            // Naprawa - update tabeli trust dla KsaowMonitor.exe
-            await FixOracleTrustSettings(parsedConnection);
-            
-            // Ponowna próba połączenia po naprawie
-            using var connection = new OracleConnection(parsedConnection);
-            await connection.OpenAsync();
-            
-            using var command = new OracleCommand("SELECT 1 FROM DUAL", connection);
-            await command.ExecuteScalarAsync();
-            
-            _logger.LogInformation("Successfully connected after fixing Oracle trust settings");
+            throw new Exception($"Oracle trigger TSPY_CONN_APW_USER blokuje aplikację. Wymagana ręczna naprawa przez administratora bazy. Szczegóły: {ex.Message}", ex);
         }
     }
 
@@ -153,25 +149,15 @@ public class DatabaseManager
         }
         catch (OracleException ex) when (ex.Message.Contains("ORA-04088") && ex.Message.Contains("TSPY_CONN_APW_USER"))
         {
-            _logger.LogWarning("Encountered trigger error ORA-04088 with TSPY_CONN_APW_USER during FIRM query. Attempting to fix trust settings.");
+            _logger.LogError("BŁĄD ORACLE: Wykryto wyzwalacz TSPY_CONN_APW_USER blokujący zapytanie do tabeli FIRM");
+            _logger.LogError("INSTRUKCJA NAPRAWY:");
+            _logger.LogError("1. Uruchom SQL*Plus jako administrator bazy danych");
+            _logger.LogError("2. Wykonaj polecenie: UPDATE apw_user.aapp SET trust=1 WHERE UPPER(nazwa) LIKE '%KSAOWMONITOR.EXE%';");
+            _logger.LogError("3. Wykonaj COMMIT;");
+            _logger.LogError("4. Uruchom ponownie aplikację KsaowMonitor");
+            _logger.LogError("SZCZEGÓŁY BŁĘDU: {ErrorMessage}", ex.Message);
             
-            // Naprawa - update tabeli trust dla KsaowMonitor.exe
-            await FixOracleTrustSettings(parsedConnection);
-            
-            // Ponowna próba po naprawie
-            using var connection = new OracleConnection(parsedConnection);
-            await connection.OpenAsync();
-
-            using var command = new OracleCommand("SELECT ID FROM FIRM", connection);
-            using var reader = await command.ExecuteReaderAsync();
-
-            while (await reader.ReadAsync())
-            {
-                ids.Add(reader["ID"]);
-            }
-
-            _logger.LogInformation("Successfully executed FIRM query after fixing Oracle trust settings");
-            return ids;
+            throw new Exception($"Oracle trigger TSPY_CONN_APW_USER blokuje zapytanie do tabeli FIRM. Wymagana ręczna naprawa przez administratora bazy. Szczegóły: {ex.Message}", ex);
         }
     }
 
@@ -227,33 +213,6 @@ public class DatabaseManager
         }
 
         throw new NotSupportedException("All authentication methods failed for Firebird connection");
-    }
-
-    private async Task FixOracleTrustSettings(string connectionString)
-    {
-        try
-        {
-            _logger.LogInformation("Attempting to fix Oracle trust settings for KSAOWMONITOR.EXE");
-            
-            using var connection = new OracleConnection(connectionString);
-            await connection.OpenAsync();
-            
-            var updateQuery = "UPDATE apw_user.aapp SET trust = 1 WHERE UPPER(nazwa) LIKE '%KSAOWMONITOR.EXE%'";
-            using var command = new OracleCommand(updateQuery, connection);
-            
-            var rowsAffected = await command.ExecuteNonQueryAsync();
-            _logger.LogInformation("Oracle trust update completed. Rows affected: {RowsAffected}", rowsAffected);
-            
-            if (rowsAffected == 0)
-            {
-                _logger.LogWarning("No rows were updated - KSAOWMONITOR.EXE entry may not exist in apw_user.aapp table");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to fix Oracle trust settings");
-            throw;
-        }
     }
 
     private string ParseOracleConnectionString(string connectionString)
